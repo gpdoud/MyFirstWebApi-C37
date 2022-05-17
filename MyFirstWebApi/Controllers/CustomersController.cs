@@ -19,6 +19,24 @@ namespace MyFirstWebApi.Controllers {
             _context = context;
         }
 
+        [HttpGet("{name}/{passcode}")]
+        public async Task<ActionResult<Customer>> Login(string name, int passcode) {
+            var cust = await _context.Customers
+                                .SingleOrDefaultAsync(x => x.Name == name && x.Passcode == passcode && x.Active);
+            if(cust is null) {
+                return NotFound();
+            }
+            return cust;
+        }
+
+        [HttpGet("active")]
+        public async Task<ActionResult<IEnumerable<Customer>>> GetActiveCustomers() {
+            if (_context.Customers == null) {
+                return NotFound();
+            }
+            return await _context.Customers.Where(x => x.Active).ToListAsync();
+        }
+
         // GET: api/Customers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers() {

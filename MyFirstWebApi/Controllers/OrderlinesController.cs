@@ -20,6 +20,20 @@ namespace MyFirstWebApi.Controllers
             _context = context;
         }
 
+        private async Task<IActionResult> RecalculateOrderTotal(int orderId) {
+            var order = await _context.Orders.FindAsync(orderId);
+            if(order is null) {
+                throw new Exception($"Could not find order {orderId}");
+            }
+            order.Total = (from ol in _context.Orderlines
+                         where ol.OrderId == orderId
+                         select new {
+                             LineTotal = ol.Quantity * ol.Price
+                         }).Sum(x => x.LineTotal);
+            await _context.SaveChangesAsync();
+            return Ok();
+        } 
+
         // GET: api/Orderlines
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Orderline>>> GetOrderlines()
@@ -64,6 +78,7 @@ namespace MyFirstWebApi.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                await RecalculateOrderTotal(orderline.OrderId);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -91,6 +106,7 @@ namespace MyFirstWebApi.Controllers
           }
             _context.Orderlines.Add(orderline);
             await _context.SaveChangesAsync();
+            await RecalculateOrderTotal(orderline.OrderId);
 
             return CreatedAtAction("GetOrderline", new { id = orderline.Id }, orderline);
         }
@@ -111,6 +127,7 @@ namespace MyFirstWebApi.Controllers
 
             _context.Orderlines.Remove(orderline);
             await _context.SaveChangesAsync();
+            await RecalculateOrderTotal(orderline.OrderId);
 
             return NoContent();
         }

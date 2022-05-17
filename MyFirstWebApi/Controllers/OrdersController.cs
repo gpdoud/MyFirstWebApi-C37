@@ -14,9 +14,44 @@ namespace MyFirstWebApi.Controllers {
     [ApiController]
     public class OrdersController : ControllerBase {
         private readonly AppDbContext _context;
+        private const string APPROVED = "Approved";
+        private const string REJECTED = "Rejected";
+        private const string REVIEW = "Review";
+        private const string NEW = "New";
 
         public OrdersController(AppDbContext context) {
             _context = context;
+        }
+
+        [HttpGet("ordersgt100")]
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrderGt100() {
+            if (_context.Orders == null) {
+                return NotFound();
+            }
+            return await _context.Orders
+                                    .Where(x => x.Total > 100)
+                                    .Include(x => x.Customer)
+                                    .Include(x => x.Orderlines)
+                                    .ToListAsync();
+            //var orders = from o in _context.Orders
+            //             join ol in _context.Orderlines
+            //                on o.Id equals ol.OrderId
+            //             join c in _context.Customers
+            //                on o.CustomerId equals c.Id
+            //             where o.Total > 100
+            //             select o;
+            //return await orders.ToListAsync();
+        }
+
+        [HttpGet("reviews/{customerId}")]
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrderInReview(int customerId) {
+            if (_context.Orders == null) {
+                return NotFound();
+            }
+            return await _context.Orders
+                                    .Include(x => x.Customer)
+                                    .Where(x => x.Status == REVIEW && x.CustomerId != customerId)
+                                    .ToListAsync();
         }
 
         // GET: api/Orders
@@ -47,19 +82,19 @@ namespace MyFirstWebApi.Controllers {
 
         [HttpPut("approve/{id}")]
         public async Task<IActionResult> ApproveOrder(int id, Order order) {
-            order.Status = "Approved";
+            order.Status = APPROVED;
             return await PutOrder(id, order);
         }
 
         [HttpPut("reject/{id}")]
         public async Task<IActionResult> RejectOrder(int id, Order order) {
-            order.Status = "Rejected";
+            order.Status = REJECTED;
             return await PutOrder(id, order);
         }
 
         [HttpPut("review/{id}")]
         public async Task<IActionResult> ReviewOrder(int id, Order order) {
-            order.Status = (order.Total <= 100) ? "Approved" : "Review";
+            order.Status = (order.Total <= 100) ? APPROVED : REVIEW;
             return await PutOrder(id, order);
         }
 
